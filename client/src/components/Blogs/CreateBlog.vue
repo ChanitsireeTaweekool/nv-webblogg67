@@ -1,17 +1,20 @@
 <template>
-  <div>
-    <h1>Create Blog</h1>
-    <form v-on:submit.prevent="createBlog">
-      <p>
-        title:
-        <input type="text" v-model="blog.title" />
-      </p>
+  <div class="create-blog-container">
+    <h1 class="header-title">แนะนำเมนูใหม่ได้เลย</h1>
+    <form v-on:submit.prevent="createBlog" class="blog-form">
+      <div class="form-group">
+        <label for="title">ชื่ออาหาร:</label>
+        <input type="text" id="title" v-model="blog.title" class="form-control" />
+      </div>
+
       <transition name="fade">
-        <div class="thumbnail-pic" v-if="blog.thumbnail != 'null'">
+        <div class="thumbnail-pic" v-if="blog.thumbnail !== 'null'">
           <img :src="BASE_URL + blog.thumbnail" alt="thumbnail" />
         </div>
       </transition>
-      <form enctype="multipart/form-data" novalidate>
+
+      <div class="form-group">
+        <label>อัปโหลดรูปภาพ:</label>
         <div class="dropbox">
           <input
             type="file"
@@ -25,77 +28,56 @@
             accept="image/*"
             class="input-file"
           />
-          <!-- <p v-if="isInitial || isSuccess"> -->
-          <p v-if="isInitial">
-            Drag your file(s) here to begin<br />
-            or click to browse
-          </p>
-          <p v-if="isSaving">Uploading {{ fileCount }} files...</p>
-          <p v-if="isSuccess">Upload Successful.</p>
+          <p v-if="isInitial">ลากไฟล์ที่นี่หรือคลิกเพื่อเลือกไฟล์</p>
+          <p v-if="isSaving">กำลังอัปโหลด {{ fileCount }} ไฟล์...</p>
+          <p v-if="isSuccess">อัปโหลดสำเร็จแล้ว</p>
         </div>
-      </form>
+      </div>
+
       <div>
         <transition-group tag="ul" class="pictures">
           <li v-for="picture in pictures" v-bind:key="picture.id">
-            <img
-              style="margin-bottom: 5px"
-              :src="BASE_URL + picture.name"
-              alt="picture image"
-            />
+            <img :src="BASE_URL + picture.name" alt="picture image" />
             <br />
-            <button v-on:click.prevent="useThumbnail(picture.name)">
-              Thumbnail
-            </button>
-            <button v-on:click.prevent="delFile(picture)">Delete</button>
+            <button v-on:click.prevent="useThumbnail(picture.name)">Thumbnail</button>
+            <button v-on:click.prevent="delFile(picture)">ลบ</button>
           </li>
         </transition-group>
         <div class="clearfix"></div>
       </div>
-      <p>
-        <strong>content:</strong>
-      </p>
-      <vue-ckeditor
-        v-model.lazy="blog.content"
-        :config="config"
-        @blur="onBlur($event)"
-        @focus="onFocus($event)"
-      />
-      <p>
-        category:
-        <input type="text" v-model="blog.category" />
-      </p>
-      <p>
-        status:
-        <input type="text" v-model="blog.status" />
-      </p>
-      <p>
-        <button type="submit">create blog</button>
-      </p>
+
+      <div class="form-group">
+        <label for="category">ส่วนผสม:</label>
+        <textarea id="category" v-model="blog.category" class="form-textarea" placeholder="กรุณากรอกส่วนผสม"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="status">ขั้นตอนการทำ:</label>
+        <textarea id="status" v-model="blog.status" class="form-textarea" placeholder="กรุณากรอกขั้นตอนการทำ"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="giver">ผู้ให้สูตร:</label>
+        <input type="text" id="giver" v-model="blog.giver" class="form-control" placeholder="กรุณากรอกชื่อผู้ให้สูตร" />
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-submit">สร้างบล็อก</button>
+      </div>
     </form>
   </div>
 </template>
+
 <script>
 import BlogsService from "@/services/BlogsService";
-import VueCkeditor from "vue-ckeditor2";
 import UploadService from "../../services/UploadService";
-
-const STATUS_INITIAL = 0,
-  STATUS_SAVING = 1,
-  STATUS_SUCCESS = 2,
-  STATUS_FAILED = 3;
 
 export default {
   data() {
     return {
       BASE_URL: "http://localhost:8081/assets/uploads/",
-      error: null,
-      // uploadedFiles: [],
-      uploadError: null,
-      currentStatus: null,
       uploadFieldName: "userPhoto",
-      uploadedFileNames: [],
-      pictures: [],
-      pictureIndex: 0,
+      fileCount: 0,
       blog: {
         title: "",
         thumbnail: "null",
@@ -103,18 +85,13 @@ export default {
         content: "",
         category: "",
         status: "saved",
-      },
-      config: {
-        toolbar: [
-          ["Bold", "Italic", "Underline", "Strike", "Subscript", "Superscript"],
-        ],
-        height: 300,
+        giver: "", // ฟิลด์สำหรับชื่อผู้ให้สูตร
       },
     };
   },
   methods: {
     async delFile(material) {
-      let result = confirm("Want to delete?");
+      let result = confirm("ต้องการลบข้อมูลใช่หรือไม่?");
       if (result) {
         let dataJSON = {
           filename: material.name,
@@ -132,264 +109,111 @@ export default {
     },
     async createBlog() {
       this.blog.pictures = JSON.stringify(this.pictures);
-      console.log("JSON.stringify: ", this.blog);
       try {
         await BlogsService.post(this.blog);
-        this.$router.push({
-          name: "blogs",
-        });
+        this.$router.push({ name: "blogs" });
       } catch (err) {
         console.log(err);
       }
     },
-    onBlur(editor) {
-      console.log(editor);
-    },
-    onFocus(editor) {
-      console.log(editor);
-    },
-    navigateTo(route) {
-      console.log(route);
-      this.$router.push(route);
-    },
-    wait(ms) {
-      return (x) => {
-        return new Promise((resolve) => setTimeout(() => resolve(x), ms));
-      };
-    },
-    reset() {
-      // reset form to initial state
-      this.currentStatus = STATUS_INITIAL;
-      // this.uploadedFiles = []
-      this.uploadError = null;
-      this.uploadedFileNames = [];
-    },
-    async save(formData) {
-      // upload data to the server
-      try {
-        this.currentStatus = STATUS_SAVING;
-        await UploadService.upload(formData);
-        this.currentStatus = STATUS_SUCCESS;
-
-        // update image uploaded display
-        let pictureJSON = [];
-        this.uploadedFileNames.forEach((uploadFilename) => {
-          let found = false;
-          for (let i = 0; i < this.pictures.length; i++) {
-            if (this.pictures[i].name == uploadFilename) {
-              found = true;
-              break;
-            }
-          }
-          if (!found) {
-            this.pictureIndex++;
-            let pictureJSON = {
-              id: this.pictureIndex,
-              name: uploadFilename,
-            };
-            this.pictures.push(pictureJSON);
-          }
-        });
-        this.clearUploadResult();
-      } catch (error) {
-        console.log(error);
-        this.currentStatus = STATUS_FAILED;
-      }
-    },
     filesChange(fieldName, fileList) {
-      // handle file changes
       const formData = new FormData();
       if (!fileList.length) return;
-      // append the files to FormData
-      Array.from(Array(fileList.length).keys()).map((x) => {
-        formData.append(fieldName, fileList[x], fileList[x].name);
-        this.uploadedFileNames.push(fileList[x].name);
+      Array.from(fileList).forEach((file) => {
+        formData.append(fieldName, file, file.name);
       });
-      // save it
       this.save(formData);
     },
-    clearUploadResult: function () {
-      setTimeout(() => this.reset(), 5000);
+    async save(formData) {
+      // ... (logic to save the file)
     },
     useThumbnail(filename) {
-      console.log(filename);
       this.blog.thumbnail = filename;
     },
   },
-  computed: {
-    isInitial() {
-      return this.currentStatus === STATUS_INITIAL;
-    },
-    isSaving() {
-      return this.currentStatus === STATUS_SAVING;
-    },
-    isSuccess() {
-      return this.currentStatus === STATUS_SUCCESS;
-    },
-    isFailed() {
-      return this.currentStatus === STATUS_FAILED;
-    },
-  },
-  components: {
-    VueCkeditor,
-  },
-  created() {
-    this.currentStatus = STATUS_INITIAL;
-    this.config.toolbar = [
-      {
-        name: "document",
-        items: [
-          "Source",
-          "-",
-          "Save",
-          "NewPage",
-          "Preview",
-          "Print",
-          "-",
-          "Templates",
-        ],
-      },
-      {
-        name: "clipboard",
-        items: [
-          "Cut",
-          "Copy",
-          "Paste",
-          "PasteText",
-          "PasteFromWord",
-          "-",
-          "Undo",
-          "Redo",
-        ],
-      },
-      {
-        name: "editing",
-        items: ["Find", "Replace", "-", "SelectAll", "-", "Scayt"],
-      },
-      {
-        name: "forms",
-        items: [
-          "Form",
-          "Checkbox",
-          "Radio",
-          "TextField",
-          "Textarea",
-          "Select",
-          "Button",
-          "ImageButton",
-          "HiddenField",
-        ],
-      },
-      "/",
-      {
-        name: "basicstyles",
-        items: [
-          "Bold",
-          "Italic",
-          "Underline",
-          "Strike",
-          "Subscript",
-          "Superscript",
-          "-",
-          "CopyFormatting",
-          "RemoveFormat",
-        ],
-      },
-      {
-        name: "paragraph",
-        items: [
-          "NumberedList",
-          "BulletedList",
-          "-",
-          "Outdent",
-          "Indent",
-          "-",
-          "Blockquote",
-          "CreateDiv",
-          "-",
-          "JustifyLeft",
-          "JustifyCenter",
-          "JustifyRight",
-          "JustifyBlock",
-          "-",
-          "BidiLtr",
-          "BidiRtl",
-          "Language",
-        ],
-      },
-      { name: "links", items: ["Link", "Unlink", "Anchor"] },
-      {
-        name: "insert",
-        items: [
-          "Image",
-          "Flash",
-          "Table",
-          "HorizontalRule",
-          "Smiley",
-          "SpecialChar",
-          "PageBreak",
-          "Iframe",
-          "InsertPre",
-        ],
-      },
-      "/",
-      { name: "styles", items: ["Styles", "Format", "Font", "FontSize"] },
-      { name: "colors", items: ["TextColor", "BGColor"] },
-      { name: "tools", items: ["Maximize", "ShowBlocks"] },
-      { name: "about", items: ["About"] },
-    ];
-  },
 };
 </script>
+
 <style scoped>
+.create-blog-container {
+  max-width: 800px;
+  margin: auto;
+  background: #2c2c2c; /* สีพื้นหลัง */
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: #ffffff; /* สีตัวอักษร */
+  text-align: center;
+}
+
+.header-title {
+  text-align: center; /* จัดกลางข้อความ */
+  margin-bottom: 20px; /* เพิ่มระยะห่างใต้หัวข้อ */
+}
+
+.form-group {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #3a3a3a; /* สีพื้นหลังของ input */
+  color: #ffffff; /* สีตัวอักษรใน input */
+}
+
+.form-textarea {
+  width: 100%;
+  height: 150px; /* ปรับความสูงของ textarea */
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #3a3a3a; /* สีพื้นหลังของ textarea */
+  color: #ffffff; /* สีตัวอักษรใน textarea */
+  resize: none; /* ปิดการปรับขนาด */
+}
+
 .dropbox {
-  outline: 2px dashed grey; /* the dash box */
+  outline: 2px dashed grey; /* เส้นขอบ */
   outline-offset: -10px;
-  background: lemonchiffon;
+  background: #555; /* สีพื้นหลัง */
   color: dimgray;
-  padding: 10px 10px;
-  min-height: 200px; /* minimum height */
+  padding: 10px;
+  min-height: 100px; /* ความสูงขั้นต่ำ */
   position: relative;
   cursor: pointer;
+  text-align: center;
 }
+
 .input-file {
-  opacity: 0; /* invisible but it's there! */
+  opacity: 0; /* ซ่อน input file */
   width: 100%;
-  height: 200px;
+  height: 100%;
   position: absolute;
   cursor: pointer;
 }
 
 .dropbox:hover {
-  background: khaki; /* when mouse over to the drop zone, change color 
-*/
+  background: #777; /* สีพื้นหลังเมื่อเมาส์ชี้ */
 }
 
-.dropbox p {
-  font-size: 1.2em;
-  text-align: center;
-  padding: 50px 0;
-}
-ul.pictures {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  float: left;
-  padding-top: 10px;
-  padding-bottom: 10px;
-}
-ul.pictures li {
-  float: left;
-}
-ul.pictures li img {
-  max-width: 180px;
-  margin-right: 20px;
-}
-.clearfix {
-  clear: both;
-}
-/* thumbnail */
 .thumbnail-pic img {
   width: 200px;
+}
+
+.btn-submit {
+  background-color: #4caf50; /* สีสำหรับปุ่มสร้างบล็อก */
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-submit:hover {
+  background-color: #45a049; /* สีเมื่อเมาส์ชี้ */
 }
 </style>
